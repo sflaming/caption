@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 
 # Run AppleScript to choose an image file and capture the path
 IMAGE_FILE=$(osascript <<'END'
@@ -18,18 +18,18 @@ if [ -z "$IMAGE_FILE" ]; then
 fi
 
 # Define parameters for primary caption
-CAPTION_LINE1="Nice night for a fatty | Fuji X-T5 35mm "
+CAPTION_LINE1="You had to be there | Fuji X-T5 35mm"
 FONT_NAME1="Space Mono"
-FONT_SIZE1=80
-COLOR1="#FF5733"  # Example hex color for the first line
-VERTICAL_POSITION1=450
+FONT_SIZE1=120
+COLOR1="#800855"  # Example hex color for the first line
+VERTICAL_PERCENTAGE1=10  # Position as a percentage of image height
 
 # Define parameters for secondary caption
-CAPTION_LINE2="Additional details or notes"
-FONT_NAME2="Helvetica"
-FONT_SIZE2=40
-COLOR2="blue"  # Can still use standard colors like "blue"
-VERTICAL_POSITION2=380  # Adjust as needed for positioning relative to line 1
+CAPTION_LINE2="by Symon Flaming"
+FONT_NAME2="Space Mono"
+FONT_SIZE2=90
+COLOR2="#fafafa"  # Can still use standard colors like "blue"
+VERTICAL_PERCENTAGE2=7  # Position as a percentage of image height
 
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
 
@@ -62,6 +62,10 @@ try
     set imageWidth to originalBitmapRep's pixelsWide()
     set imageHeight to originalBitmapRep's pixelsHigh()
 
+    -- Calculate vertical positions based on image height and percentages
+    set verticalPosition1 to imageHeight * $VERTICAL_PERCENTAGE1 / 100
+    set verticalPosition2 to imageHeight * $VERTICAL_PERCENTAGE2 / 100
+
     -- Create a new NSImage for drawing
     set finalImage to current application's NSImage's alloc()'s initWithSize:{imageWidth, imageHeight}
     finalImage's addRepresentation:originalBitmapRep
@@ -91,7 +95,7 @@ try
     set textSize1 to theNSString1's sizeWithAttributes:attributesNSDictionary1
     set textWidth1 to textSize1's width
     set centeredX1 to (imageWidth - textWidth1) / 2
-    theNSString1's drawAtPoint:{centeredX1, $VERTICAL_POSITION1} withAttributes:attributesNSDictionary1
+    theNSString1's drawAtPoint:{centeredX1, verticalPosition1} withAttributes:attributesNSDictionary1
 
     -- Draw second line of text
     set theNSString2 to current application's NSString's stringWithString:"$CAPTION_LINE2"
@@ -117,7 +121,7 @@ try
     set textSize2 to theNSString2's sizeWithAttributes:attributesNSDictionary2
     set textWidth2 to textSize2's width
     set centeredX2 to (imageWidth - textWidth2) / 2
-    theNSString2's drawAtPoint:{centeredX2, $VERTICAL_POSITION2} withAttributes:attributesNSDictionary2
+    theNSString2's drawAtPoint:{centeredX2, verticalPosition2} withAttributes:attributesNSDictionary2
 
     -- Unlock drawing and save final image
     finalImage's unlockFocus()
@@ -128,7 +132,6 @@ on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
 END
-
 
 
 
