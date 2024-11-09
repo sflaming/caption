@@ -17,15 +17,23 @@ if [ -z "$IMAGE_FILE" ]; then
     exit 1
 fi
 
-# Define parameters for captioning with custom font, color, and position
-CAPTION="Nice night for a fatty | Fuji X-T5 35mm \n Symon Flaming"
-FONT_NAME="Space Mono"
-FONT_SIZE=80
-COLOR="black"  # Change this to any other color if you prefer
-VERTICAL_POSITION=450  # Adjust this value to move the text up or down
+# Define parameters for primary caption
+CAPTION_LINE1="Good boy, Arthur | Fuji X-T5 35mm"
+FONT_NAME1="Space Mono"
+FONT_SIZE1=120
+COLOR1="white"
+VERTICAL_POSITION1=450
+
+# Define parameters for secondary caption
+CAPTION_LINE2="@soymn"
+FONT_NAME2="Space Mono"
+FONT_SIZE2=90
+COLOR2="white"
+VERTICAL_POSITION2=380  # Adjust as needed for positioning relative to line 1
+
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
 
-# AppleScript to add centered text with custom font and color to the image, preserving quality
+# AppleScript to add two lines of text with custom fonts, colors, and positions to the image
 osascript <<END
 use AppleScript version "2.4"
 use framework "Foundation"
@@ -37,33 +45,7 @@ set theFile to POSIX path of "$IMAGE_FILE"
 set newPath to POSIX path of "$OUTPUT_FILE"
 
 try
-    -- Text with custom font and specified color
-    set theNSString to current application's NSString's stringWithString:"$CAPTION"
-    
-    -- Custom font setup
-    set customFont to current application's NSFont's fontWithName:"$FONT_NAME" |size|:$FONT_SIZE
-    if customFont is missing value then error "Font not found: $FONT_NAME"
-    
-    -- Set custom color based on predefined choices
-    set customColor to missing value
-    if "$COLOR" is equal to "red" then
-        set customColor to current application's NSColor's redColor()
-    else if "$COLOR" is equal to "blue" then
-        set customColor to current application's NSColor's blueColor()
-    else if "$COLOR" is equal to "white" then
-        set customColor to current application's NSColor's whiteColor()
-    else if "$COLOR" is equal to "green" then
-        set customColor to current application's NSColor's greenColor()
-    else
-        set customColor to current application's NSColor's blackColor() -- Default to black if color is not recognized
-    end if
-
-    if customColor is missing value then error "Failed to set color: $COLOR"
-
-    -- Construct attributes dictionary with custom font and color
-    set attributesNSDictionary to current application's NSDictionary's dictionaryWithObjects:{customFont, customColor} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
-
-    -- Load the original image as NSBitmapImageRep to retain DPI and other metadata
+    -- Load image data
     set imageData to current application's NSData's alloc()'s initWithContentsOfFile:theFile
     set originalBitmapRep to current application's NSBitmapImageRep's imageRepWithData:imageData
     if originalBitmapRep is missing value then error "Failed to load image."
@@ -75,20 +57,58 @@ try
     -- Create a new NSImage for drawing
     set finalImage to current application's NSImage's alloc()'s initWithSize:{imageWidth, imageHeight}
     finalImage's addRepresentation:originalBitmapRep
-
-    -- Begin drawing on the new image
     finalImage's lockFocus()
+
+    -- Draw first line of text
+    set theNSString1 to current application's NSString's stringWithString:"$CAPTION_LINE1"
+    set customFont1 to current application's NSFont's fontWithName:"$FONT_NAME1" |size|:$FONT_SIZE1
+    if customFont1 is missing value then error "Font not found: $FONT_NAME1"
     
-    -- Calculate text width for centering
-    set textSize to theNSString's sizeWithAttributes:attributesNSDictionary
-    set textWidth to textSize's width
-    set centeredX to (imageWidth - textWidth) / 2
+    -- Set color for first line
+    if "$COLOR1" is equal to "red" then
+        set customColor1 to current application's NSColor's redColor()
+    else if "$COLOR1" is equal to "blue" then
+        set customColor1 to current application's NSColor's blueColor()
+    else if "$COLOR1" is equal to "white" then
+        set customColor1 to current application's NSColor's whiteColor()
+    else if "$COLOR1" is equal to "green" then
+        set customColor1 to current application's NSColor's greenColor()
+    else
+        set customColor1 to current application's NSColor's blackColor() -- Default to black if color is not recognized
+    end if
 
-    -- Draw the text onto the new image
-    theNSString's drawAtPoint:{centeredX, $VERTICAL_POSITION} withAttributes:attributesNSDictionary
+    set attributesNSDictionary1 to current application's NSDictionary's dictionaryWithObjects:{customFont1, customColor1} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
+    set textSize1 to theNSString1's sizeWithAttributes:attributesNSDictionary1
+    set textWidth1 to textSize1's width
+    set centeredX1 to (imageWidth - textWidth1) / 2
+    theNSString1's drawAtPoint:{centeredX1, $VERTICAL_POSITION1} withAttributes:attributesNSDictionary1
+
+    -- Draw second line of text
+    set theNSString2 to current application's NSString's stringWithString:"$CAPTION_LINE2"
+    set customFont2 to current application's NSFont's fontWithName:"$FONT_NAME2" |size|:$FONT_SIZE2
+    if customFont2 is missing value then error "Font not found: $FONT_NAME2"
+    
+    -- Set color for second line
+    if "$COLOR2" is equal to "red" then
+        set customColor2 to current application's NSColor's redColor()
+    else if "$COLOR2" is equal to "blue" then
+        set customColor2 to current application's NSColor's blueColor()
+    else if "$COLOR2" is equal to "white" then
+        set customColor2 to current application's NSColor's whiteColor()
+    else if "$COLOR2" is equal to "green" then
+        set customColor2 to current application's NSColor's greenColor()
+    else
+        set customColor2 to current application's NSColor's blackColor() -- Default to black if color is not recognized
+    end if
+
+    set attributesNSDictionary2 to current application's NSDictionary's dictionaryWithObjects:{customFont2, customColor2} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
+    set textSize2 to theNSString2's sizeWithAttributes:attributesNSDictionary2
+    set textWidth2 to textSize2's width
+    set centeredX2 to (imageWidth - textWidth2) / 2
+    theNSString2's drawAtPoint:{centeredX2, $VERTICAL_POSITION2} withAttributes:attributesNSDictionary2
+
+    -- Unlock drawing and save final image
     finalImage's unlockFocus()
-
-    -- Save the final image with text as high-quality JPEG
     set finalBitmapRep to current application's NSBitmapImageRep's alloc()'s initWithData:(finalImage's TIFFRepresentation())
     set newNSData to finalBitmapRep's representationUsingType:(current application's NSJPEGFileType) |properties|:{NSImageCompressionFactor:0.8, NSImageProgressive:false}
     newNSData's writeToFile:newPath atomically:true
@@ -96,6 +116,7 @@ on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
 END
+
 
 # Notify user
 echo "High-quality captioned image saved as: $OUTPUT_FILE"
