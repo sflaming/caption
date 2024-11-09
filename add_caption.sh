@@ -18,17 +18,17 @@ if [ -z "$IMAGE_FILE" ]; then
 fi
 
 # Define parameters for primary caption
-CAPTION_LINE1="Good boy, Arthur | Fuji X-T5 35mm"
+CAPTION_LINE1="Nice night for a fatty | Fuji X-T5 35mm "
 FONT_NAME1="Space Mono"
-FONT_SIZE1=120
-COLOR1="white"
+FONT_SIZE1=80
+COLOR1="#FF5733"  # Example hex color for the first line
 VERTICAL_POSITION1=450
 
 # Define parameters for secondary caption
-CAPTION_LINE2="@soymn"
-FONT_NAME2="Space Mono"
-FONT_SIZE2=90
-COLOR2="white"
+CAPTION_LINE2="Additional details or notes"
+FONT_NAME2="Helvetica"
+FONT_SIZE2=40
+COLOR2="blue"  # Can still use standard colors like "blue"
 VERTICAL_POSITION2=380  # Adjust as needed for positioning relative to line 1
 
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
@@ -39,6 +39,14 @@ use AppleScript version "2.4"
 use framework "Foundation"
 use framework "AppKit"
 use scripting additions
+
+-- Helper function to create NSColor from hex code
+on colorFromHex(hexCode)
+    set redComponent to (do shell script "printf '%d' 0x" & text 2 thru 3 of hexCode) / 255.0
+    set greenComponent to (do shell script "printf '%d' 0x" & text 4 thru 5 of hexCode) / 255.0
+    set blueComponent to (do shell script "printf '%d' 0x" & text 6 thru 7 of hexCode) / 255.0
+    return current application's NSColor's colorWithRed:redComponent green:greenComponent blue:blueComponent alpha:1.0
+end colorFromHex
 
 -- Path for input and output
 set theFile to POSIX path of "$IMAGE_FILE"
@@ -65,7 +73,9 @@ try
     if customFont1 is missing value then error "Font not found: $FONT_NAME1"
     
     -- Set color for first line
-    if "$COLOR1" is equal to "red" then
+    if "$COLOR1" starts with "#" then
+        set customColor1 to my colorFromHex("$COLOR1")
+    else if "$COLOR1" is equal to "red" then
         set customColor1 to current application's NSColor's redColor()
     else if "$COLOR1" is equal to "blue" then
         set customColor1 to current application's NSColor's blueColor()
@@ -89,7 +99,9 @@ try
     if customFont2 is missing value then error "Font not found: $FONT_NAME2"
     
     -- Set color for second line
-    if "$COLOR2" is equal to "red" then
+    if "$COLOR2" starts with "#" then
+        set customColor2 to my colorFromHex("$COLOR2")
+    else if "$COLOR2" is equal to "red" then
         set customColor2 to current application's NSColor's redColor()
     else if "$COLOR2" is equal to "blue" then
         set customColor2 to current application's NSColor's blueColor()
@@ -116,6 +128,9 @@ on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
 END
+
+
+
 
 
 # Notify user
