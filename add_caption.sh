@@ -17,6 +17,27 @@ if [ -z "$IMAGE_FILE" ]; then
     exit 1
 fi
 
+# Option 1: Command-line prompt for the caption
+# Uncomment the following line to use command-line input
+# read -p "Enter the custom caption: " CUSTOM_CAPTION
+
+# Option 2: AppleScript dialog box for the caption
+# Uncomment the following block to use an AppleScript dialog box
+CUSTOM_CAPTION=$(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+display dialog "Enter the custom caption:" default answer ""
+set captionText to text returned of result
+return captionText
+END
+)
+
+# If no caption was provided, set a default message
+if [ -z "$CUSTOM_CAPTION" ]; then
+    CUSTOM_CAPTION="Look around you"
+fi
+
 # Retrieve EXIF data for Camera, Lens, and Photographer using exiftool
 # CAMERA_MAKE_MODEL=$(exiftool -s -s -s -Make -Model "$IMAGE_FILE" | tr '\n' ' ')
 CAMERA_MODEL=$(exiftool -s -s -s -Model "$IMAGE_FILE")
@@ -31,7 +52,7 @@ if [ -n "$PHOTOGRAPHER" ]; then
 fi
 
 # Define parameters for primary caption with EXIF data
-CAPTION_LINE1="Think about your dad | $EXIF_DATA"
+CAPTION_LINE1="$CUSTOM_CAPTION | $EXIF_DATA"
 FONT_NAME1="Space Mono"
 FONT_SIZE1=80
 COLOR1="#000000"  # Example hex color for the first line
@@ -92,14 +113,6 @@ try
     -- Set color for first line
     if "$COLOR1" starts with "#" then
         set customColor1 to my colorFromHex("$COLOR1")
-    else if "$COLOR1" is equal to "red" then
-        set customColor1 to current application's NSColor's redColor()
-    else if "$COLOR1" is equal to "blue" then
-        set customColor1 to current application's NSColor's blueColor()
-    else if "$COLOR1" is equal to "white" then
-        set customColor1 to current application's NSColor's whiteColor()
-    else if "$COLOR1" is equal to "green" then
-        set customColor1 to current application's NSColor's greenColor()
     else
         set customColor1 to current application's NSColor's blackColor() -- Default to black if color is not recognized
     end if
@@ -110,11 +123,11 @@ try
     set centeredX1 to (imageWidth - textWidth1) / 2
     theNSString1's drawAtPoint:{centeredX1, verticalPosition1} withAttributes:attributesNSDictionary1
 
-    -- Draw second line of text
+    -- Draw second line of text with custom caption
     set theNSString2 to current application's NSString's stringWithString:"$CAPTION_LINE2"
     set customFont2 to current application's NSFont's fontWithName:"$FONT_NAME2" |size|:$FONT_SIZE2
     if customFont2 is missing value then error "Font not found: $FONT_NAME2"
-    
+
     -- Set color for second line
     if "$COLOR2" starts with "#" then
         set customColor2 to my colorFromHex("$COLOR2")
@@ -145,9 +158,6 @@ on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
 END
-
-
-
 
 # Notify user
 echo "High-quality captioned image saved as: $OUTPUT_FILE"
