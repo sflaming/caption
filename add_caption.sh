@@ -17,19 +17,32 @@ if [ -z "$IMAGE_FILE" ]; then
     exit 1
 fi
 
-# Define parameters for primary caption
-CAPTION_LINE1="You had to be there | Fuji X-T5 35mm"
+# Retrieve EXIF data for Camera, Lens, and Photographer using exiftool
+# CAMERA_MAKE_MODEL=$(exiftool -s -s -s -Make -Model "$IMAGE_FILE" | tr '\n' ' ')
+CAMERA_MODEL=$(exiftool -s -s -s -Model "$IMAGE_FILE")
+LENS_MODEL=$(exiftool -s -s -s -LensModel "$IMAGE_FILE")
+FOCAL_LENGTH=$(exiftool -s -s -s -FocalLength "$IMAGE_FILE")
+PHOTOGRAPHER=$(exiftool -s -s -s -Artist "$IMAGE_FILE")
+
+# Combine EXIF data into a single string for the caption
+EXIF_DATA="$CAMERA_MODEL $LENS_MODEL"
+if [ -n "$PHOTOGRAPHER" ]; then
+    EXIF_DATA="$EXIF_DATA"
+fi
+
+# Define parameters for primary caption with EXIF data
+CAPTION_LINE1="Think about your dad | $EXIF_DATA"
 FONT_NAME1="Space Mono"
-FONT_SIZE1=120
-COLOR1="#800855"  # Example hex color for the first line
-VERTICAL_PERCENTAGE1=10  # Position as a percentage of image height
+FONT_SIZE1=80
+COLOR1="#000000"  # Example hex color for the first line
+VERTICAL_PERCENTAGE1=7  # Position as a percentage of image height
 
 # Define parameters for secondary caption
-CAPTION_LINE2="by Symon Flaming"
+CAPTION_LINE2="$PHOTOGRAPHER"
 FONT_NAME2="Space Mono"
-FONT_SIZE2=90
-COLOR2="#fafafa"  # Can still use standard colors like "blue"
-VERTICAL_PERCENTAGE2=7  # Position as a percentage of image height
+FONT_SIZE2=60
+COLOR2="#000000"  # Can still use standard colors like "blue"
+VERTICAL_PERCENTAGE2=5  # Position as a percentage of image height
 
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
 
