@@ -17,12 +17,7 @@ if [ -z "$IMAGE_FILE" ]; then
     exit 1
 fi
 
-# Option 1: Command-line prompt for the caption
-# Uncomment the following line to use command-line input
-# read -p "Enter the custom caption: " CUSTOM_CAPTION
-
-# Option 2: AppleScript dialog box for the caption
-# Uncomment the following block to use an AppleScript dialog box
+# Prompt for custom caption
 CUSTOM_CAPTION=$(osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
@@ -38,8 +33,31 @@ if [ -z "$CUSTOM_CAPTION" ]; then
     CUSTOM_CAPTION="Look around you"
 fi
 
+# Use choose color for COLOR1 and COLOR2
+get_hex_color() {
+    osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+try
+    set chosenColor to choose color default color {65535, 65535, 65535}  -- default is white
+    set redValue to (item 1 of chosenColor / 257) as integer
+    set greenValue to (item 2 of chosenColor / 257) as integer
+    set blueValue to (item 3 of chosenColor / 257) as integer
+    set hexColor to "#" & (do shell script "printf '%02X%02X%02X' " & redValue & " " & greenValue & " " & blueValue)
+    return hexColor
+on error
+    return "#000000"  -- fallback to black if there's an error
+end try
+END
+}
+
+
+# Assign colors selected through the color picker
+COLOR1=$(get_hex_color)
+COLOR2=$(get_hex_color)
+
 # Retrieve EXIF data for Camera, Lens, and Photographer using exiftool
-# CAMERA_MAKE_MODEL=$(exiftool -s -s -s -Make -Model "$IMAGE_FILE" | tr '\n' ' ')
 CAMERA_MODEL=$(exiftool -s -s -s -Model "$IMAGE_FILE")
 LENS_MODEL=$(exiftool -s -s -s -LensModel "$IMAGE_FILE")
 FOCAL_LENGTH=$(exiftool -s -s -s -FocalLength "$IMAGE_FILE")
@@ -55,14 +73,12 @@ fi
 CAPTION_LINE1="$CUSTOM_CAPTION | $EXIF_DATA"
 FONT_NAME1="Space Mono"
 FONT_SIZE1=80
-COLOR1="#000000"  # Example hex color for the first line
 VERTICAL_PERCENTAGE1=7  # Position as a percentage of image height
 
 # Define parameters for secondary caption
 CAPTION_LINE2="$PHOTOGRAPHER"
 FONT_NAME2="Space Mono"
 FONT_SIZE2=60
-COLOR2="#000000"  # Can still use standard colors like "blue"
 VERTICAL_PERCENTAGE2=5  # Position as a percentage of image height
 
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
@@ -111,12 +127,8 @@ try
     if customFont1 is missing value then error "Font not found: $FONT_NAME1"
     
     -- Set color for first line
-    if "$COLOR1" starts with "#" then
-        set customColor1 to my colorFromHex("$COLOR1")
-    else
-        set customColor1 to current application's NSColor's blackColor() -- Default to black if color is not recognized
-    end if
-
+    set customColor1 to my colorFromHex("$COLOR1")
+    
     set attributesNSDictionary1 to current application's NSDictionary's dictionaryWithObjects:{customFont1, customColor1} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
     set textSize1 to theNSString1's sizeWithAttributes:attributesNSDictionary1
     set textWidth1 to textSize1's width
@@ -129,20 +141,8 @@ try
     if customFont2 is missing value then error "Font not found: $FONT_NAME2"
 
     -- Set color for second line
-    if "$COLOR2" starts with "#" then
-        set customColor2 to my colorFromHex("$COLOR2")
-    else if "$COLOR2" is equal to "red" then
-        set customColor2 to current application's NSColor's redColor()
-    else if "$COLOR2" is equal to "blue" then
-        set customColor2 to current application's NSColor's blueColor()
-    else if "$COLOR2" is equal to "white" then
-        set customColor2 to current application's NSColor's whiteColor()
-    else if "$COLOR2" is equal to "green" then
-        set customColor2 to current application's NSColor's greenColor()
-    else
-        set customColor2 to current application's NSColor's blackColor() -- Default to black if color is not recognized
-    end if
-
+    set customColor2 to my colorFromHex("$COLOR2")
+    
     set attributesNSDictionary2 to current application's NSDictionary's dictionaryWithObjects:{customFont2, customColor2} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
     set textSize2 to theNSString2's sizeWithAttributes:attributesNSDictionary2
     set textWidth2 to textSize2's width
