@@ -52,7 +52,6 @@ end try
 END
 }
 
-
 # Assign colors selected through the color picker
 COLOR1=$(get_hex_color)
 COLOR2=$(get_hex_color)
@@ -71,14 +70,12 @@ fi
 
 # Define parameters for primary caption with EXIF data
 CAPTION_LINE1="$CUSTOM_CAPTION | $EXIF_DATA"
-FONT_NAME1="Space Mono"
-FONT_SIZE1=80
+FONT_NAME1="HackNerdFontComplete-Regular"
 VERTICAL_PERCENTAGE1=7  # Position as a percentage of image height
 
 # Define parameters for secondary caption
 CAPTION_LINE2="$PHOTOGRAPHER"
-FONT_NAME2="Space Mono"
-FONT_SIZE2=60
+FONT_NAME2="HackNerdFontComplete-Regular"
 VERTICAL_PERCENTAGE2=5  # Position as a percentage of image height
 
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
@@ -112,6 +109,10 @@ try
     set imageWidth to originalBitmapRep's pixelsWide()
     set imageHeight to originalBitmapRep's pixelsHigh()
 
+    -- Calculate font sizes based on image height
+    set fontSize1 to round (imageHeight * 0.018)
+    set fontSize2 to round (imageHeight * 0.009)
+
     -- Calculate vertical positions based on image height and percentages
     set verticalPosition1 to imageHeight * $VERTICAL_PERCENTAGE1 / 100
     set verticalPosition2 to imageHeight * $VERTICAL_PERCENTAGE2 / 100
@@ -123,7 +124,7 @@ try
 
     -- Draw first line of text
     set theNSString1 to current application's NSString's stringWithString:"$CAPTION_LINE1"
-    set customFont1 to current application's NSFont's fontWithName:"$FONT_NAME1" |size|:$FONT_SIZE1
+    set customFont1 to current application's NSFont's fontWithName:"$FONT_NAME1" |size|:fontSize1
     if customFont1 is missing value then error "Font not found: $FONT_NAME1"
     
     -- Set color for first line
@@ -137,7 +138,7 @@ try
 
     -- Draw second line of text with custom caption
     set theNSString2 to current application's NSString's stringWithString:"$CAPTION_LINE2"
-    set customFont2 to current application's NSFont's fontWithName:"$FONT_NAME2" |size|:$FONT_SIZE2
+    set customFont2 to current application's NSFont's fontWithName:"$FONT_NAME2" |size|:fontSize2
     if customFont2 is missing value then error "Font not found: $FONT_NAME2"
 
     -- Set color for second line
