@@ -33,14 +33,14 @@ if [ -z "$CUSTOM_CAPTION" ]; then
     CUSTOM_CAPTION="Look around you"
 fi
 
-# Use choose color for COLOR1 and COLOR2
+# Function to display color picker and return a hex color
 get_hex_color() {
     osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
 
 try
-    set chosenColor to choose color default color {65535, 65535, 65535}  -- default is white
+    set chosenColor to choose color default color {0, 0, 0}  -- default is white
     set redValue to (item 1 of chosenColor / 257) as integer
     set greenValue to (item 2 of chosenColor / 257) as integer
     set blueValue to (item 3 of chosenColor / 257) as integer
@@ -56,27 +56,95 @@ END
 COLOR1=$(get_hex_color)
 COLOR2=$(get_hex_color)
 
+# Prompt for vertical and horizontal positioning choices for line 1
+read -r VERTICAL_POSITION1 HORIZONTAL_POSITION1 <<< $(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+set verticalOptions to {"default", "top", "bottom"}
+set horizontalOptions to {"left", "center", "right"}
+
+set verticalChoice1 to choose from list verticalOptions with prompt "Select vertical position for Line 1:"
+set horizontalChoice1 to choose from list horizontalOptions with prompt "Select horizontal position for Line 1:"
+
+return (item 1 of verticalChoice1) & " " & (item 1 of horizontalChoice1)
+END
+)
+
+# Prompt for vertical and horizontal positioning choices for line 2
+read -r VERTICAL_POSITION2 HORIZONTAL_POSITION2 <<< $(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+set verticalOptions to {"default", "top", "bottom", "10%"}
+set horizontalOptions to {"left", "center", "right"}
+
+set verticalChoice2 to choose from list verticalOptions with prompt "Select vertical position for Line 2:"
+set horizontalChoice2 to choose from list horizontalOptions with prompt "Select horizontal position for Line 2:"
+
+return (item 1 of verticalChoice2) & " " & (item 1 of horizontalChoice2)
+END
+)
+
+# Set vertical position percentages based on user choice for line 1
+if [ "$VERTICAL_POSITION1" = "top" ]; then
+    VERTICAL_PERCENTAGE1=95
+elif [ "$VERTICAL_POSITION1" = "bottom" ]; then
+    VERTICAL_PERCENTAGE1=0.18
+else
+    VERTICAL_PERCENTAGE1=7
+fi
+
+# Set vertical position percentages based on user choice for line 2
+if [ "$VERTICAL_POSITION2" = "top" ]; then
+    VERTICAL_PERCENTAGE2=92
+elif [ "$VERTICAL_POSITION2" = "bottom" ]; then
+    VERTICAL_PERCENTAGE2=0.3
+elif [ "$VERTICAL_POSITION2" = "10%" ]; then
+    VERTICAL_PERCENTAGE2=10
+else
+    VERTICAL_PERCENTAGE2=5
+fi
+
+# Set horizontal alignment values for drawing based on user choice
+# Left alignment is at 4% of image width, Center alignment is at the center, Right alignment is at 96%
+get_horizontal_position() {
+    local choice=$1
+    if [ "$choice" = "left" ]; then
+        echo "4"
+    elif [ "$choice" = "right" ]; then
+        echo "96"
+    else
+        echo "50"
+    fi
+}
+
+HORIZONTAL_PERCENTAGE1=$(get_horizontal_position "$HORIZONTAL_POSITION1")
+HORIZONTAL_PERCENTAGE2=$(get_horizontal_position "$HORIZONTAL_POSITION2")
+
 # Retrieve EXIF data for Camera, Lens, and Photographer using exiftool
 CAMERA_MODEL=$(exiftool -s -s -s -Model "$IMAGE_FILE")
 LENS_MODEL=$(exiftool -s -s -s -LensModel "$IMAGE_FILE")
 FOCAL_LENGTH=$(exiftool -s -s -s -FocalLength "$IMAGE_FILE")
 PHOTOGRAPHER=$(exiftool -s -s -s -Artist "$IMAGE_FILE")
+ISO=$(exiftool -s -s -s -ISO "$IMAGE_FILE")
+SHUTTER_SPEED=$(exiftool -s -s -s -ShutterSpeedValue "$IMAGE_FILE")
+APERATURE=$(exiftool -s -s -s -ApertureValue "$IMAGE_FILE")
 
-# Combine EXIF data into a single string for the caption
-EXIF_DATA="$CAMERA_MODEL $LENS_MODEL"
-if [ -n "$PHOTOGRAPHER" ]; then
-    EXIF_DATA="$EXIF_DATA"
-fi
+
+# Combine EXIF data into a single string for the captions
+CAMERA_AND_LENS="$CAMERA_MODEL $LENS_MODEL"
+EXIF_LINE2="SS_$SHUTTER_SPEED    ƒ/$APERATURE    ISO_$ISO"
+
+# Combine shutter speed, aperature, and iSO into one string for the second line
 
 # Define parameters for primary caption with EXIF data
-CAPTION_LINE1="$CUSTOM_CAPTION | $EXIF_DATA"
-FONT_NAME1="HackNerdFontComplete-Regular"
-VERTICAL_PERCENTAGE1=7  # Position as a percentage of image height
+CAPTION_LINE1="$CUSTOM_CAPTION | $CAMERA_AND_LENS"
+FONT_NAME1="Space Mono"
 
 # Define parameters for secondary caption
-CAPTION_LINE2="$PHOTOGRAPHER"
-FONT_NAME2="HackNerdFontComplete-Regular"
-VERTICAL_PERCENTAGE2=5  # Position as a percentage of image height
+CAPTION_LINE2="$EXIF_LINE2"
+FONT_NAME2="Space Mono"
 
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
 
@@ -111,7 +179,7 @@ try
 
     -- Calculate font sizes based on image height
     set fontSize1 to round (imageHeight * 0.018)
-    set fontSize2 to round (imageHeight * 0.009)
+    set fontSize2 to round (imageHeight * 0.015)
 
     -- Calculate vertical positions based on image height and percentages
     set verticalPosition1 to imageHeight * $VERTICAL_PERCENTAGE1 / 100
@@ -122,7 +190,7 @@ try
     finalImage's addRepresentation:originalBitmapRep
     finalImage's lockFocus()
 
-    -- Draw first line of text
+    -- Draw first line of text with adjusted horizontal alignment
     set theNSString1 to current application's NSString's stringWithString:"$CAPTION_LINE1"
     set customFont1 to current application's NSFont's fontWithName:"$FONT_NAME1" |size|:fontSize1
     if customFont1 is missing value then error "Font not found: $FONT_NAME1"
@@ -133,10 +201,16 @@ try
     set attributesNSDictionary1 to current application's NSDictionary's dictionaryWithObjects:{customFont1, customColor1} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
     set textSize1 to theNSString1's sizeWithAttributes:attributesNSDictionary1
     set textWidth1 to textSize1's width
-    set centeredX1 to (imageWidth - textWidth1) / 2
-    theNSString1's drawAtPoint:{centeredX1, verticalPosition1} withAttributes:attributesNSDictionary1
+    if "$HORIZONTAL_POSITION1" = "left" then
+        set horizontalPosition1 to imageWidth * 0.04  -- 4% of image width
+    else if "$HORIZONTAL_POSITION1" = "right" then
+        set horizontalPosition1 to imageWidth * 0.96 - textWidth1  -- 96% minus text width
+    else
+        set horizontalPosition1 to (imageWidth - textWidth1) / 2  -- Centered
+    end if
+    theNSString1's drawAtPoint:{horizontalPosition1, verticalPosition1} withAttributes:attributesNSDictionary1
 
-    -- Draw second line of text with custom caption
+    -- Draw second line of text with adjusted horizontal alignment
     set theNSString2 to current application's NSString's stringWithString:"$CAPTION_LINE2"
     set customFont2 to current application's NSFont's fontWithName:"$FONT_NAME2" |size|:fontSize2
     if customFont2 is missing value then error "Font not found: $FONT_NAME2"
@@ -147,8 +221,14 @@ try
     set attributesNSDictionary2 to current application's NSDictionary's dictionaryWithObjects:{customFont2, customColor2} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
     set textSize2 to theNSString2's sizeWithAttributes:attributesNSDictionary2
     set textWidth2 to textSize2's width
-    set centeredX2 to (imageWidth - textWidth2) / 2
-    theNSString2's drawAtPoint:{centeredX2, verticalPosition2} withAttributes:attributesNSDictionary2
+    if "$HORIZONTAL_POSITION2" = "left" then
+        set horizontalPosition2 to imageWidth * 0.04  -- 4% of image width
+    else if "$HORIZONTAL_POSITION2" = "right" then
+        set horizontalPosition2 to imageWidth * 0.96 - textWidth2  -- 96% minus text width
+    else
+        set horizontalPosition2 to (imageWidth - textWidth2) / 2  -- Centered
+    end if
+    theNSString2's drawAtPoint:{horizontalPosition2, verticalPosition2} withAttributes:attributesNSDictionary2
 
     -- Unlock drawing and save final image
     finalImage's unlockFocus()
