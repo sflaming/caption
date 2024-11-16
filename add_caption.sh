@@ -103,7 +103,7 @@ elif [ "$VERTICAL_POSITION2" = "bottom" ]; then
 elif [ "$VERTICAL_POSITION2" = "10%" ]; then
     VERTICAL_PERCENTAGE2=10
 else
-    VERTICAL_PERCENTAGE2=5
+    VERTICAL_PERCENTAGE2=4
 fi
 
 # Set horizontal alignment values for drawing based on user choice
@@ -133,13 +133,13 @@ APERATURE=$(exiftool -s -s -s -ApertureValue "$IMAGE_FILE")
 
 
 # Combine EXIF data into a single string for the captions
-CAMERA_AND_LENS="$CAMERA_MODEL $LENS_MODEL"
-EXIF_LINE2="SS_$SHUTTER_SPEED    ƒ/$APERATURE    ISO_$ISO"
-
-# Combine shutter speed, aperature, and iSO into one string for the second line
+EXIF_LINE1="$CAMERA_MODEL $LENS_MODEL"
+EXIF_LINE2="$FOCAL_LENGTH    $SHUTTER_SPEED s    ƒ/$APERATURE    ISO $ISO"
+EXIF_LINE2_ALT1="$PHOTOGRAPHER"
+LINE_2_CUSTOM
 
 # Define parameters for primary caption with EXIF data
-CAPTION_LINE1="$CUSTOM_CAPTION | $CAMERA_AND_LENS"
+CAPTION_LINE1="$CUSTOM_CAPTION | $EXIF_LINE1"
 FONT_NAME1="Space Mono"
 
 # Define parameters for secondary caption
@@ -178,8 +178,8 @@ try
     set imageHeight to originalBitmapRep's pixelsHigh()
 
     -- Calculate font sizes based on image height
-    set fontSize1 to round (imageHeight * 0.018)
-    set fontSize2 to round (imageHeight * 0.015)
+    set fontSize1 to round (imageHeight * 0.016)
+    set fontSize2 to round (imageHeight * 0.012)
 
     -- Calculate vertical positions based on image height and percentages
     set verticalPosition1 to imageHeight * $VERTICAL_PERCENTAGE1 / 100
@@ -198,6 +198,7 @@ try
     -- Set color for first line
     set customColor1 to my colorFromHex("$COLOR1")
     
+    -- Position the first line taking text width into account
     set attributesNSDictionary1 to current application's NSDictionary's dictionaryWithObjects:{customFont1, customColor1} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
     set textSize1 to theNSString1's sizeWithAttributes:attributesNSDictionary1
     set textWidth1 to textSize1's width
@@ -218,6 +219,7 @@ try
     -- Set color for second line
     set customColor2 to my colorFromHex("$COLOR2")
     
+    -- Position the second line taking text width into account
     set attributesNSDictionary2 to current application's NSDictionary's dictionaryWithObjects:{customFont2, customColor2} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
     set textSize2 to theNSString2's sizeWithAttributes:attributesNSDictionary2
     set textWidth2 to textSize2's width
@@ -230,15 +232,16 @@ try
     end if
     theNSString2's drawAtPoint:{horizontalPosition2, verticalPosition2} withAttributes:attributesNSDictionary2
 
-    -- Unlock drawing and save final image
+    -- Unlock focus and save the final image
     finalImage's unlockFocus()
     set finalBitmapRep to current application's NSBitmapImageRep's alloc()'s initWithData:(finalImage's TIFFRepresentation())
     set newNSData to finalBitmapRep's representationUsingType:(current application's NSJPEGFileType) |properties|:{NSImageCompressionFactor:0.8, NSImageProgressive:false}
-    newNSData's writeToFile:newPath atomically:true
+    if newNSData's writeToFile:newPath atomically:true then
+        display notification "High-quality captioned image saved successfully." with title "Image Caption Success"
+    else
+        display dialog "Error: Failed to save the image." buttons {"OK"} default button "OK"
+    end if
 on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
 END
-
-# Notify user
-echo "High-quality captioned image saved as: $OUTPUT_FILE"
