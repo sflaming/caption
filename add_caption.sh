@@ -33,6 +33,22 @@ if [ -z "$CUSTOM_CAPTION" ]; then
     CUSTOM_CAPTION="Look around you"
 fi
 
+# Prompt for custom signature
+CUSTOM_SIG=$(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+display dialog "Enter the custom signature:" default answer ""
+set captionText to text returned of result
+return captionText
+END
+)
+
+# If no sig was provided, set a default empty signature
+if [ -z "$CUSTOM_SIG" ]; then
+    CUSTOM_SIG=""
+fi
+
 # Function to display color picker and return a hex color
 get_hex_color() {
     osascript <<'END'
@@ -97,7 +113,7 @@ fi
 
 # Set vertical position percentages based on user choice for line 2
 if [ "$VERTICAL_POSITION2" = "top" ]; then
-    VERTICAL_PERCENTAGE2=92
+    VERTICAL_PERCENTAGE2=95
 elif [ "$VERTICAL_POSITION2" = "bottom" ]; then
     VERTICAL_PERCENTAGE2=0.3
 elif [ "$VERTICAL_POSITION2" = "10%" ]; then
@@ -132,11 +148,11 @@ SHUTTER_SPEED=$(exiftool -s -s -s -ShutterSpeedValue "$IMAGE_FILE")
 APERATURE=$(exiftool -s -s -s -ApertureValue "$IMAGE_FILE")
 
 
-# Combine EXIF data into a single string for the captions
+# Concatenate EXIF data for the captions
 EXIF_LINE1="$CAMERA_MODEL $LENS_MODEL"
 EXIF_LINE2="$FOCAL_LENGTH    $SHUTTER_SPEED s    ƒ/$APERATURE    ISO $ISO"
 EXIF_LINE2_ALT1="$PHOTOGRAPHER"
-LINE_2_CUSTOM
+EXIF_LINE2_ALT2="$CUSTOM_SIG"
 
 # Define parameters for primary caption with EXIF data
 CAPTION_LINE1="$CUSTOM_CAPTION | $EXIF_LINE1"
@@ -144,6 +160,13 @@ FONT_NAME1="Space Mono"
 
 # Define parameters for secondary caption
 CAPTION_LINE2="$EXIF_LINE2"
+FONT_NAME2="Space Mono"
+
+# TODO Get user preference for third line (custom, photographer name, or none)
+CHOSEN_ALT=""
+
+# Define parameters for third caption
+CAPTION_LINE3="$CHOSEN_ALT"
 FONT_NAME2="Space Mono"
 
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
@@ -235,12 +258,24 @@ try
     -- Unlock focus and save the final image
     finalImage's unlockFocus()
     set finalBitmapRep to current application's NSBitmapImageRep's alloc()'s initWithData:(finalImage's TIFFRepresentation())
+    
+    -- Adjust the size of the bitmap representation to set the PPI to 72
+    set pixelWidth to finalBitmapRep's pixelsWide()
+    set pixelHeight to finalBitmapRep's pixelsHigh()
+
+    -- TODO Adjust the bitmap to have a resolution of 72 PPI 
+    finalBitmapRep's setSize:{pixelWidth / 2, pixelHeight / 2} -- this isn't working to cut the ppi in half
+
+    -- Create the JPEG data with the adjusted bitmap representation
     set newNSData to finalBitmapRep's representationUsingType:(current application's NSJPEGFileType) |properties|:{NSImageCompressionFactor:0.8, NSImageProgressive:false}
+
+    -- Write the new image to the output path
     if newNSData's writeToFile:newPath atomically:true then
-        display notification "High-quality captioned image saved successfully." with title "Image Caption Success"
+        display notification "Oh, hey! Image saved successfully!" with title "Image Caption Success"
     else
         display dialog "Error: Failed to save the image." buttons {"OK"} default button "OK"
     end if
+
 on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
