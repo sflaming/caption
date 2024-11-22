@@ -93,7 +93,7 @@ read -r VERTICAL_POSITION2 HORIZONTAL_POSITION2 <<< $(osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
 
-set verticalOptions to {"default", "top", "bottom", "10%"}
+set verticalOptions to {"default", "top", "bottom", "11%"}
 set horizontalOptions to {"left", "center", "right"}
 
 set verticalChoice2 to choose from list verticalOptions with prompt "Select vertical position for Line 2:"
@@ -108,7 +108,7 @@ read -r VERTICAL_POSITION3 HORIZONTAL_POSITION3 <<< $(osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
 
-set verticalOptions to {"default", "top", "bottom", "10%"}
+set verticalOptions to {"default", "top", "bottom", "11%"}
 set horizontalOptions to {"left", "center", "right"}
 
 set verticalChoice3 to choose from list verticalOptions with prompt "Select vertical position for Line 3:"
@@ -132,8 +132,8 @@ if [ "$VERTICAL_POSITION2" = "top" ]; then
     VERTICAL_PERCENTAGE2=95
 elif [ "$VERTICAL_POSITION2" = "bottom" ]; then
     VERTICAL_PERCENTAGE2=0.3
-elif [ "$VERTICAL_POSITION2" = "10%" ]; then
-    VERTICAL_PERCENTAGE2=10
+elif [ "$VERTICAL_POSITION2" = "11%" ]; then
+    VERTICAL_PERCENTAGE2=11
 else
     VERTICAL_PERCENTAGE2=4
 fi
@@ -143,8 +143,8 @@ if [ "$VERTICAL_POSITION3" = "top" ]; then
     VERTICAL_PERCENTAGE3=95
 elif [ "$VERTICAL_POSITION3" = "bottom" ]; then
     VERTICAL_PERCENTAGE3=0.5
-elif [ "$VERTICAL_POSITION3" = "10%" ]; then
-    VERTICAL_PERCENTAGE3=10
+elif [ "$VERTICAL_POSITION3" = "11%" ]; then
+    VERTICAL_PERCENTAGE3=11
 else
     VERTICAL_PERCENTAGE3=2
 fi
