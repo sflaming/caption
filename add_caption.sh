@@ -33,6 +33,22 @@ if [ -z "$CUSTOM_CAPTION" ]; then
     CUSTOM_CAPTION="Look around you"
 fi
 
+# Prompt for custom signature
+CUSTOM_SIG=$(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+display dialog "Enter the custom signature:" default answer ""
+set captionText to text returned of result
+return captionText
+END
+)
+
+# If no sig was provided, set a default empty signature
+if [ -z "$CUSTOM_SIG" ]; then
+    CUSTOM_SIG=""
+fi
+
 # Function to display color picker and return a hex color
 get_hex_color() {
     osascript <<'END'
@@ -55,6 +71,7 @@ END
 # Assign colors selected through the color picker
 COLOR1=$(get_hex_color)
 COLOR2=$(get_hex_color)
+COLOR3=$(get_hex_color)
 
 # Prompt for vertical and horizontal positioning choices for line 1
 read -r VERTICAL_POSITION1 HORIZONTAL_POSITION1 <<< $(osascript <<'END'
@@ -86,6 +103,21 @@ return (item 1 of verticalChoice2) & " " & (item 1 of horizontalChoice2)
 END
 )
 
+# Prompt for vertical and horizontal positioning choices for line 3
+read -r VERTICAL_POSITION3 HORIZONTAL_POSITION3 <<< $(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+set verticalOptions to {"default", "top", "bottom", "10%"}
+set horizontalOptions to {"left", "center", "right"}
+
+set verticalChoice3 to choose from list verticalOptions with prompt "Select vertical position for Line 3:"
+set horizontalChoice3 to choose from list horizontalOptions with prompt "Select horizontal position for Line 3:"
+
+return (item 1 of verticalChoice3) & " " & (item 1 of horizontalChoice3)
+END
+)
+
 # Set vertical position percentages based on user choice for line 1
 if [ "$VERTICAL_POSITION1" = "top" ]; then
     VERTICAL_PERCENTAGE1=95
@@ -97,13 +129,24 @@ fi
 
 # Set vertical position percentages based on user choice for line 2
 if [ "$VERTICAL_POSITION2" = "top" ]; then
-    VERTICAL_PERCENTAGE2=92
+    VERTICAL_PERCENTAGE2=95
 elif [ "$VERTICAL_POSITION2" = "bottom" ]; then
     VERTICAL_PERCENTAGE2=0.3
 elif [ "$VERTICAL_POSITION2" = "10%" ]; then
     VERTICAL_PERCENTAGE2=10
 else
     VERTICAL_PERCENTAGE2=4
+fi
+
+# Set vertical position percentages based on user choice for line 3
+if [ "$VERTICAL_POSITION3" = "top" ]; then
+    VERTICAL_PERCENTAGE3=95
+elif [ "$VERTICAL_POSITION3" = "bottom" ]; then
+    VERTICAL_PERCENTAGE3=0.5
+elif [ "$VERTICAL_POSITION3" = "10%" ]; then
+    VERTICAL_PERCENTAGE3=10
+else
+    VERTICAL_PERCENTAGE3=2
 fi
 
 # Set horizontal alignment values for drawing based on user choice
@@ -121,6 +164,7 @@ get_horizontal_position() {
 
 HORIZONTAL_PERCENTAGE1=$(get_horizontal_position "$HORIZONTAL_POSITION1")
 HORIZONTAL_PERCENTAGE2=$(get_horizontal_position "$HORIZONTAL_POSITION2")
+HORIZONTAL_PERCENTAGE3=$(get_horizontal_position "$HORIZONTAL_POSITION3")
 
 # Retrieve EXIF data for Camera, Lens, and Photographer using exiftool
 CAMERA_MODEL=$(exiftool -s -s -s -Model "$IMAGE_FILE")
@@ -131,12 +175,31 @@ ISO=$(exiftool -s -s -s -ISO "$IMAGE_FILE")
 SHUTTER_SPEED=$(exiftool -s -s -s -ShutterSpeedValue "$IMAGE_FILE")
 APERATURE=$(exiftool -s -s -s -ApertureValue "$IMAGE_FILE")
 
-
-# Combine EXIF data into a single string for the captions
+# Concatenate EXIF data for the captions
 EXIF_LINE1="$CAMERA_MODEL $LENS_MODEL"
 EXIF_LINE2="$FOCAL_LENGTH    $SHUTTER_SPEED s    ƒ/$APERATURE    ISO $ISO"
-EXIF_LINE2_ALT1="$PHOTOGRAPHER"
-LINE_2_CUSTOM
+EXIF_LINE3_ALT1="$PHOTOGRAPHER"
+EXIF_LINE3_ALT2="$CUSTOM_SIG"
+
+# Get user preference for third line
+THIRD_LINE_CHOICE=$(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+set options to {"Custom Signature", "Photographer Name", "None"}
+set choice to choose from list options with prompt "Choose the third line option:"
+return (item 1 of choice)
+END
+)
+
+# Set the chosen alternative based on user preference
+if [ "$THIRD_LINE_CHOICE" = "Custom Signature" ]; then
+    CHOSEN_ALT="$EXIF_LINE3_ALT2"
+elif [ "$THIRD_LINE_CHOICE" = "Photographer Name" ]; then
+    CHOSEN_ALT="$EXIF_LINE3_ALT1"
+else
+    CHOSEN_ALT=""
+fi
 
 # Define parameters for primary caption with EXIF data
 CAPTION_LINE1="$CUSTOM_CAPTION | $EXIF_LINE1"
@@ -146,9 +209,13 @@ FONT_NAME1="Space Mono"
 CAPTION_LINE2="$EXIF_LINE2"
 FONT_NAME2="Space Mono"
 
+# Define parameters for third caption
+CAPTION_LINE3="$CHOSEN_ALT"
+FONT_NAME3="Space Mono"
+
 OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
 
-# AppleScript to add two lines of text with custom fonts, colors, and positions to the image
+# AppleScript to add three lines of text with custom fonts, colors, and positions to the image
 osascript <<END
 use AppleScript version "2.4"
 use framework "Foundation"
@@ -180,10 +247,12 @@ try
     -- Calculate font sizes based on image height
     set fontSize1 to round (imageHeight * 0.016)
     set fontSize2 to round (imageHeight * 0.012)
+    set fontSize3 to round (imageHeight * 0.012)
 
     -- Calculate vertical positions based on image height and percentages
     set verticalPosition1 to imageHeight * $VERTICAL_PERCENTAGE1 / 100
     set verticalPosition2 to imageHeight * $VERTICAL_PERCENTAGE2 / 100
+    set verticalPosition3 to imageHeight * $VERTICAL_PERCENTAGE3 / 100
 
     -- Create a new NSImage for drawing
     set finalImage to current application's NSImage's alloc()'s initWithSize:{imageWidth, imageHeight}
@@ -232,15 +301,50 @@ try
     end if
     theNSString2's drawAtPoint:{horizontalPosition2, verticalPosition2} withAttributes:attributesNSDictionary2
 
+    -- Draw third line of text if it exists
+    if "$CAPTION_LINE3" is not "" then
+        set theNSString3 to current application's NSString's stringWithString:"$CAPTION_LINE3"
+        set customFont3 to current application's NSFont's fontWithName:"$FONT_NAME3" |size|:fontSize3
+        if customFont3 is missing value then error "Font not found: $FONT_NAME3"
+
+        -- Set color for third line
+        set customColor3 to my colorFromHex("$COLOR3")
+        
+        -- Position the third line taking text width into account
+        set attributesNSDictionary3 to current application's NSDictionary's dictionaryWithObjects:{customFont3, customColor3} forKeys:{current application's NSFontAttributeName, current application's NSForegroundColorAttributeName}
+        set textSize3 to theNSString3's sizeWithAttributes:attributesNSDictionary3
+        set textWidth3 to textSize3's width
+        if "$HORIZONTAL_POSITION3" = "left" then
+            set horizontalPosition3 to imageWidth * 0.04  -- 4% of image width
+        else if "$HORIZONTAL_POSITION3" = "right" then
+            set horizontalPosition3 to imageWidth * 0.96 - textWidth3  -- 96% minus text width
+        else
+            set horizontalPosition3 to (imageWidth - textWidth3) / 2  -- Centered
+        end if
+        theNSString3's drawAtPoint:{horizontalPosition3, verticalPosition3} withAttributes:attributesNSDictionary3
+    end if
+
     -- Unlock focus and save the final image
     finalImage's unlockFocus()
     set finalBitmapRep to current application's NSBitmapImageRep's alloc()'s initWithData:(finalImage's TIFFRepresentation())
+    
+    -- Adjust the size of the bitmap representation to set the PPI to 72
+    set pixelWidth to finalBitmapRep's pixelsWide()
+    set pixelHeight to finalBitmapRep's pixelsHigh()
+
+    -- TODO Adjust the bitmap to have a resolution of 72 PPI 
+    finalBitmapRep's setSize:{pixelWidth / 2, pixelHeight / 2} -- this isn't working to cut the ppi in half
+
+    -- Create the JPEG data with the adjusted bitmap representation
     set newNSData to finalBitmapRep's representationUsingType:(current application's NSJPEGFileType) |properties|:{NSImageCompressionFactor:0.8, NSImageProgressive:false}
+
+    -- Write the new image to the output path
     if newNSData's writeToFile:newPath atomically:true then
-        display notification "High-quality captioned image saved successfully." with title "Image Caption Success"
+        display notification "Oh, hey! Image saved successfully!" with title "Image Caption Success"
     else
         display dialog "Error: Failed to save the image." buttons {"OK"} default button "OK"
     end if
+
 on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
