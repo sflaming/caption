@@ -78,7 +78,7 @@ read -r VERTICAL_POSITION1 HORIZONTAL_POSITION1 <<< $(osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
 
-set verticalOptions to {"default", "top", "bottom"}
+set verticalOptions to {"default", "top", "bottom", "lower-mid"}
 set horizontalOptions to {"left", "center", "right"}
 
 set verticalChoice1 to choose from list verticalOptions with prompt "Select vertical position for Line 1:"
@@ -93,7 +93,7 @@ read -r VERTICAL_POSITION2 HORIZONTAL_POSITION2 <<< $(osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
 
-set verticalOptions to {"default", "top", "bottom", "11%"}
+set verticalOptions to {"default", "top", "bottom", "lower-mid"}
 set horizontalOptions to {"left", "center", "right"}
 
 set verticalChoice2 to choose from list verticalOptions with prompt "Select vertical position for Line 2:"
@@ -108,7 +108,7 @@ read -r VERTICAL_POSITION3 HORIZONTAL_POSITION3 <<< $(osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
 
-set verticalOptions to {"default", "top", "bottom", "11%"}
+set verticalOptions to {"default", "top", "bottom", "lower-mid"}
 set horizontalOptions to {"left", "center", "right"}
 
 set verticalChoice3 to choose from list verticalOptions with prompt "Select vertical position for Line 3:"
@@ -123,6 +123,8 @@ if [ "$VERTICAL_POSITION1" = "top" ]; then
     VERTICAL_PERCENTAGE1=95
 elif [ "$VERTICAL_POSITION1" = "bottom" ]; then
     VERTICAL_PERCENTAGE1=0.18
+elif [ "$VERTICAL_POSITION1" = "lower-mid" ]; then
+    VERTICAL_PERCENTAGE1=11
 else
     VERTICAL_PERCENTAGE1=7
 fi
@@ -132,7 +134,7 @@ if [ "$VERTICAL_POSITION2" = "top" ]; then
     VERTICAL_PERCENTAGE2=95
 elif [ "$VERTICAL_POSITION2" = "bottom" ]; then
     VERTICAL_PERCENTAGE2=0.3
-elif [ "$VERTICAL_POSITION2" = "11%" ]; then
+elif [ "$VERTICAL_POSITION2" = "lower-mid" ]; then
     VERTICAL_PERCENTAGE2=11
 else
     VERTICAL_PERCENTAGE2=4
@@ -143,7 +145,7 @@ if [ "$VERTICAL_POSITION3" = "top" ]; then
     VERTICAL_PERCENTAGE3=95
 elif [ "$VERTICAL_POSITION3" = "bottom" ]; then
     VERTICAL_PERCENTAGE3=0.5
-elif [ "$VERTICAL_POSITION3" = "11%" ]; then
+elif [ "$VERTICAL_POSITION3" = "lower-mid" ]; then
     VERTICAL_PERCENTAGE3=11
 else
     VERTICAL_PERCENTAGE3=2
