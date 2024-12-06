@@ -1,7 +1,5 @@
 #!/bin/zsh
 
-
-
 # Run AppleScript to choose an image file and capture the path
 IMAGE_FILE=$(osascript <<'END'
 use AppleScript version "2.4"
@@ -138,7 +136,7 @@ END
 if [ "$VERTICAL_POSITION1" = "top" ]; then
     VERTICAL_PERCENTAGE1=95
 elif [ "$VERTICAL_POSITION1" = "bottom" ]; then
-    VERTICAL_PERCENTAGE1=0.18
+    VERTICAL_PERCENTAGE1=1
 elif [ "$VERTICAL_POSITION1" = "lower-mid" ]; then
     VERTICAL_PERCENTAGE1=11
 else
@@ -149,7 +147,7 @@ fi
 if [ "$VERTICAL_POSITION2" = "top" ]; then
     VERTICAL_PERCENTAGE2=95
 elif [ "$VERTICAL_POSITION2" = "bottom" ]; then
-    VERTICAL_PERCENTAGE2=0.3
+    VERTICAL_PERCENTAGE2=1
 elif [ "$VERTICAL_POSITION2" = "lower-mid" ]; then
     VERTICAL_PERCENTAGE2=11
 else
@@ -160,7 +158,7 @@ fi
 if [ "$VERTICAL_POSITION3" = "top" ]; then
     VERTICAL_PERCENTAGE3=95
 elif [ "$VERTICAL_POSITION3" = "bottom" ]; then
-    VERTICAL_PERCENTAGE3=0.5
+    VERTICAL_PERCENTAGE3=1
 elif [ "$VERTICAL_POSITION3" = "lower-mid" ]; then
     VERTICAL_PERCENTAGE3=11
 else
@@ -204,11 +202,42 @@ THIRD_LINE_CHOICE=$(osascript <<'END'
 use AppleScript version "2.4"
 use scripting additions
 
-set options to {"Custom Signature", "Photographer Name", "None"}
+set options to {"Custom Signature", "Photographer Name", "Logo", "None"}
 set choice to choose from list options with prompt "Choose the third line option:"
 return (item 1 of choice)
 END
 )
+
+# Initialize variables for logo
+LOGO_FILE=""
+LOGO_SIZE_PERCENTAGE=10
+
+# If logo is chosen, prompt for the PNG file and size percentage
+if [ "$THIRD_LINE_CHOICE" = "Logo" ]; then
+    LOGO_FILE=$(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+set theFile to POSIX path of (choose file with prompt "Choose a PNG logo file" of type {"png"})
+return theFile
+END
+)
+
+    # Prompt for logo size percentage
+    LOGO_SIZE_PERCENTAGE=$(osascript <<'END'
+use AppleScript version "2.4"
+use scripting additions
+
+display dialog "Enter logo size as percentage of image width (1-30):" default answer "2"
+set sizeText to text returned of result
+if sizeText is "" then
+    return "2"
+else
+    return sizeText
+end if
+END
+)
+fi
 
 # Set the chosen alternative based on user preference
 if [ "$THIRD_LINE_CHOICE" = "Custom Signature" ]; then
@@ -319,8 +348,35 @@ try
     end if
     theNSString2's drawAtPoint:{horizontalPosition2, verticalPosition2} withAttributes:attributesNSDictionary2
 
-    -- Draw third line of text if it exists
-    if "$CAPTION_LINE3" is not "" then
+    -- Handle third line (either text or logo)
+    if "$THIRD_LINE_CHOICE" = "Logo" then
+        -- Load and draw the logo
+        set logoPath to POSIX path of "$LOGO_FILE"
+        set logoData to current application's NSData's alloc()'s initWithContentsOfFile:logoPath
+        if logoData is not missing value then
+            set logoImage to current application's NSImage's alloc()'s initWithData:logoData
+            if logoImage is not missing value then
+                -- Calculate logo size based on image width percentage
+                set logoWidth to imageWidth * $LOGO_SIZE_PERCENTAGE / 100
+                set logoHeight to logoWidth  -- Make it square for simplicity
+                
+                -- Calculate logo position
+                if "$HORIZONTAL_POSITION3" = "left" then
+                    set horizontalPosition3 to imageWidth * 0.04
+                else if "$HORIZONTAL_POSITION3" = "right" then
+                    set horizontalPosition3 to imageWidth * 0.96 - logoWidth
+                else
+                    set horizontalPosition3 to (imageWidth - logoWidth) / 2
+                end if
+                
+                -- Draw the logo
+                set destRect to current application's NSMakeRect(horizontalPosition3, verticalPosition3, logoWidth, logoHeight)
+                set srcRect to current application's NSMakeRect(0, 0, logoImage's |size|()'s width, logoImage's |size|()'s height)
+                logoImage's drawInRect:destRect fromRect:srcRect operation:(current application's NSCompositeSourceOver) fraction:1.0
+            end if
+        end if
+    else if "$CAPTION_LINE3" is not "" then
+        -- Draw third line of text
         set theNSString3 to current application's NSString's stringWithString:"$CAPTION_LINE3"
         set customFont3 to current application's NSFont's fontWithName:"$FONT_NAME3" |size|:fontSize3
         if customFont3 is missing value then error "Font not found: $FONT_NAME3"
@@ -367,8 +423,6 @@ on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
 END
-
-
 
 # Create `smaller` directory in the same location as the image
 
