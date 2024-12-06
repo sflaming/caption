@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+
+
 # Run AppleScript to choose an image file and capture the path
 IMAGE_FILE=$(osascript <<'END'
 use AppleScript version "2.4"
@@ -16,6 +18,20 @@ if [ -z "$IMAGE_FILE" ]; then
     echo "No file selected. Exiting."
     exit 1
 fi
+
+# Get image size data
+# Run sips command and capture output
+output=$(sips -g dpiHeight -g dpiWidth $IMAGE_FILE)
+
+# Extract dpiHeight
+dpiHeight=$(echo "$output" | grep "dpiHeight" | awk '{print $2}')
+
+# Extract dpiWidth
+dpiWidth=$(echo "$output" | grep "dpiWidth" | awk '{print $2}')
+
+# Display the values (optional)
+echo "dpiHeight: $dpiHeight"
+echo "dpiWidth: $dpiWidth"
 
 # Prompt for custom caption
 CUSTOM_CAPTION=$(osascript <<'END'
@@ -351,3 +367,14 @@ on error errMsg number errNum
     display dialog "Error: " & errMsg & " (" & errNum & ")" buttons {"OK"} default button "OK"
 end try
 END
+
+
+
+# Create `smaller` directory in the same location as the image
+
+    # Shrink image
+    echo "OUTPUT_DIR: $OUTPUT_DIR"
+    echo "OUTPUT_FILE: $OUTPUT_FILE"
+    SMALLER_OUTPUT_FILE="${IMAGE_FILE%.*}-captioned.jpg"
+    echo "SMALLER_OUTPUT_FILE: $SMALLER_OUTPUT_FILE"
+    sips -Z 2500 -s format jpeg -s formatOptions best $OUTPUT_FILE --out $SMALLER_OUTPUT_FILE
